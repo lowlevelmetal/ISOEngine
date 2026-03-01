@@ -8,7 +8,7 @@
 #include "isoengine/engine.h"
 
 #include <assert.h>
-#include <stddef.h>
+#include <stdlib.h>
 
 int main() {
     isoengine *engine = NULL;
