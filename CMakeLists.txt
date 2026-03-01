@@ -7,6 +7,7 @@ add_subdirectory(3rd/SDL)
 
 add_library(isoengine STATIC
     src/engine.c
+    src/window.c
 )
 
 target_include_directories(isoengine
@@ -16,7 +17,8 @@ target_include_directories(isoengine
 
 target_link_libraries(isoengine PRIVATE SDL3::SDL3)
 
-target_compile_features(isoengine PUBLIC c_std_23)
+set_property(TARGET isoengine PROPERTY CMAKE_C_STANDARD 23)
+set_property(TARGET isoengine PROPERTY CMAKE_C_STANDARD_REQUIRED ON)
 
 ## Tests
 

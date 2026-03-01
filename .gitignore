@@ -3,3 +3,4 @@ build*/
 
 # Any cache crap
 *cache*
+.vscode*

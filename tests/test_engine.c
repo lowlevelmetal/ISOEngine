@@ -5,14 +5,14 @@
  * matt.g@castus.tv
  */
 
-#include "isoengine/engine.h"
+#include "isoengine/isoengine.h"
 
 #include <assert.h>
 #include <stdlib.h>
 
 int main() {
-    isoengine *engine = NULL;
-    assert((engine = create_iso_engine()) != NULL);
+    void *engine = nullptr;
+    assert((engine = isoengine_create()) != NULL);
 
     free(engine);
 }

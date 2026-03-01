@@ -5,13 +5,14 @@
  * matt.g@castus.tv
  */
 
-#include "isoengine/engine.h"
+#include "isoengine/isoengine.h"
+#include "engine.h"
 #include "macro.h"
 
-isoengine *create_iso_engine() {
-    isoengine *engine = (isoengine*)malloc(sizeof(isoengine));
-    if(engine == NULL) {
-        ERROR("Out of memory");
+void *isoengine_create() {
+    void *engine = calloc(1, sizeof(isoengine));
+    if(engine == nullptr) {
+        ERROR("Out of Memory");
     }
 
     return engine;
