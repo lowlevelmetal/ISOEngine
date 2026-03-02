@@ -12,7 +12,6 @@
 
 int main() {
     void *engine = nullptr;
-    assert((engine = isoengine_create()) != NULL);
-
-    free(engine);
+    assert((engine = isoengine_create()));
+    assert(isoengine_destroy(engine));
 }

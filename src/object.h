@@ -10,12 +10,12 @@
 
 #include "isoengine/isoengine.h"
 
-#include <stdint.h>
-
 typedef struct isoengine_object {
     isoengine_keypress_callback keypress_callback;
-    uint32_t x;
-    uint32_t y;
+    isoengine_3dcoords coords;
 } isoengine_object;
+
+struct isoengine;
+bool _object_handle_keys(struct isoengine *engine, const bool *const scancodes);
 
 #endif

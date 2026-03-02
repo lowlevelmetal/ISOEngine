@@ -64,10 +64,13 @@ bool isoengine_destroy(void *engine) {
     free(eng);
 
     SDL_Quit();
+
+    return true;
 }
 
 bool isoengine_handle_events(void *engine) {
-    SDL_Event event;
+    static bool scancodes[ISO_SCANCODE_COUNT] = {};
+    SDL_Event event = {};
     isoengine *eng = (isoengine *)engine;
 
     if(eng == nullptr) {
@@ -79,7 +82,18 @@ bool isoengine_handle_events(void *engine) {
         switch(event.type) {
             case SDL_EVENT_QUIT:
                 return false;
+            case SDL_EVENT_KEY_DOWN:
+                scancodes[event.key.scancode] = true;
+                break;
+            case SDL_EVENT_KEY_UP:
+                scancodes[event.key.scancode] = false;
+                break;
         }
+    }
+
+    if(!_object_handle_keys(eng, scancodes)) {
+        ERROR("Object handle keys");
+        return false;
     }
 
     return true;

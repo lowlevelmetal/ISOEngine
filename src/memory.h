@@ -10,6 +10,6 @@
 
 #include <stdlib.h>
 
-void *recalloc(void *buffer, size_t nmemb, size_t size);
+void *recalloc(void *buffer, size_t old_nmemb, size_t new_nmemb, size_t size) ;
 
 #endif
