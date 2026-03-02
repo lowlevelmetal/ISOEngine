@@ -8,6 +8,7 @@ add_subdirectory(3rd/SDL)
 add_library(isoengine STATIC
     src/engine.c
     src/window.c
+    src/render.c
 )
 
 target_include_directories(isoengine
@@ -29,3 +30,7 @@ add_executable(test_engine tests/test_engine.c)
 target_link_libraries(test_engine PRIVATE isoengine)
 
 add_test(NAME test_engine COMMAND test_engine)
+
+## Examples
+
+add_subdirectory(examples)
