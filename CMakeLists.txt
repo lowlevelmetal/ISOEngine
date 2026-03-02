@@ -9,6 +9,8 @@ add_library(isoengine STATIC
     src/engine.c
     src/window.c
     src/render.c
+    src/object.c
+    src/memory.c
 )
 
 target_include_directories(isoengine
@@ -23,13 +25,7 @@ set_property(TARGET isoengine PROPERTY CMAKE_C_STANDARD_REQUIRED ON)
 
 ## Tests
 
-enable_testing()
-
-add_executable(test_engine tests/test_engine.c)
-
-target_link_libraries(test_engine PRIVATE isoengine)
-
-add_test(NAME test_engine COMMAND test_engine)
+add_subdirectory(tests)
 
 ## Examples
 

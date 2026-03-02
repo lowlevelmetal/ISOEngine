@@ -19,6 +19,16 @@ void *isoengine_create() {
         return nullptr;
     }
 
+    isoengine *eng = (isoengine *)engine;
+
+    eng->object_buffer_len = 1024;
+    eng->objects = calloc(eng->object_buffer_len, sizeof(isoengine_object));
+    if(eng->objects == nullptr) {
+        ERROR("Out of memory");
+        free(engine);
+        return nullptr;
+    }
+
     if(!SDL_Init(SDL_INIT_VIDEO)) {
         ERROR("SDL_Init failed: %s", SDL_GetError());
         free(engine);
@@ -44,6 +54,11 @@ bool isoengine_destroy(void *engine) {
     if(eng->window) {
         SDL_DestroyWindow(eng->window);
         eng->window = nullptr;
+    }
+
+    if(eng->objects) {
+        free(eng->objects);
+        eng->objects = nullptr;
     }
 
     free(eng);
