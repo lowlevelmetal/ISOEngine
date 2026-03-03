@@ -394,13 +394,19 @@ typedef struct isoengine_3dcoords {
     size_t z;
 } isoengine_3dcoords;
 
+typedef struct isoengine_2dcoords {
+    size_t x;
+    size_t y;
+} isoengine_2dcoords;
+
 /**
  * A function pointer type for a callback that handles key press events in an isometric engine, taking a starting position (startx, starty),
  * output pointers for the resulting end position (endx, endy), and an isoengine_keycode indicating which key was pressed.
  * This callback pattern allows the engine to compute a new position based on the original coordinates and the specific key input,
  * writing the result back through the endx and endy pointers.
  */
-typedef isoengine_3dcoords (*isoengine_keypress_callback)(const isoengine_3dcoords *const current_coords, const ISO_Scancode keycode);
+typedef isoengine_3dcoords (*isoengine_object3d_keypress_callback_func)(const isoengine_3dcoords *const current_coords, const ISO_Scancode keycode);
+typedef isoengine_2dcoords (*isoengine_object2d_keypress_callback_func)(const isoengine_2dcoords *const current_coords, const ISO_Scancode keycode);
 
 /**
  * Creates and initializes a new instance of an isometric engine, returning an opaque pointer to the newly created engine object.
@@ -448,7 +454,8 @@ bool isoengine_render_draw(void *const engine);
  *       of 1024 objects when needed. The returned pointer points to the
  *       newly allocated object within the engine's object buffer.
  */
-void *isoengine_object_create(void *engine, const isoengine_3dcoords *const coords);
+void *isoengine_object3d_create(void *engine, const isoengine_3dcoords *const coords);
+void *isoengine_object2d_create(void *engine, const isoengine_2dcoords *const coords);
 
 /**
  * @brief Registers a keypress callback function for an ISOEngine object.
@@ -463,8 +470,9 @@ void *isoengine_object_create(void *engine, const isoengine_3dcoords *const coor
  * @note The callback function must remain valid for the lifetime of the object
  *       or until the callback is unregistered.
  */
-bool isoengine_object_keypress_callback(void *object, isoengine_keypress_callback callback);
+bool isoengine_object3d_keypress_callback(void *object, isoengine_object3d_keypress_callback_func callback);
+bool isoengine_object2d_keypress_callback(void *object, isoengine_object2d_keypress_callback_func callback);
 
-
+bool isoengine_object2d_texture(void *engine, void *object2d, const char *filepng);
 
 #endif

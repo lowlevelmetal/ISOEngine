@@ -19,11 +19,9 @@
     exit(EXIT_FAILURE); \
 }
 
-#define ERROR(str, ...) {\
-    fprintf(stderr, "[ISOENGINE] [ERROR]: " str "\n", ##__VA_ARGS__); \
-    exit(EXIT_FAILURE); \
-}
-
+#define ERROR(str, ...)\
+    fprintf(stderr, "[ISOENGINE] [ERROR]: " str "\n", ##__VA_ARGS__)
+    
 #define DEBUG(str, ...)
 
 #else
@@ -33,10 +31,8 @@
     exit(EXIT_FAILURE); \
 }
 
-#define ERROR(str, ...) {\
-    fprintf(stderr, "[DEBUG] [ISOENGINE] [ERROR @ %s]: " str "\n", __func__, ##__VA_ARGS__); \
-    exit(EXIT_FAILURE); \
-}
+#define ERROR(str, ...)\
+    fprintf(stderr, "[DEBUG] [ISOENGINE] [ERROR @ %s]: " str "\n", __func__, ##__VA_ARGS__)
 
 #endif // ! _DEBUG
 #endif // ! _SUPPRESS_LOG

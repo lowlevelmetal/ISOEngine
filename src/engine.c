@@ -21,11 +21,20 @@ void *isoengine_create() {
 
     isoengine *eng = (isoengine *)engine;
 
-    eng->object_buffer_len = 1024;
-    eng->objects = calloc(eng->object_buffer_len, sizeof(isoengine_object));
-    if(eng->objects == nullptr) {
+    eng->object3d_buffer_len = 1024;
+    eng->objects3d = calloc(eng->object3d_buffer_len, sizeof(isoengine_object3d));
+    if(eng->objects3d == nullptr) {
         ERROR("Out of memory");
         free(engine);
+        return nullptr;
+    }
+
+    eng->object2d_buffer_len = 1024;
+    eng->objects2d = calloc(eng->object2d_buffer_len, sizeof(isoengine_object2d));
+    if(eng->objects2d == nullptr) {
+        ERROR("Out of memory");
+        free(eng->objects3d);
+        free(eng);
         return nullptr;
     }
 
@@ -56,9 +65,28 @@ bool isoengine_destroy(void *engine) {
         eng->window = nullptr;
     }
 
-    if(eng->objects) {
-        free(eng->objects);
-        eng->objects = nullptr;
+    if(eng->objects3d) {
+        for(size_t i = 0; i < eng->object3d_count; i++) {
+            if(eng->objects3d[i].texture) {
+                SDL_DestroyTexture(eng->objects3d[i].texture);
+                eng->objects3d[i].texture = nullptr;
+            }
+        }
+
+        free(eng->objects3d);
+        eng->objects3d = nullptr;
+    }
+
+    if(eng->objects2d) {
+        for(size_t i = 0; i < eng->object2d_count; i++) {
+            if(eng->objects2d[i].texture) {
+                SDL_DestroyTexture(eng->objects2d[i].texture);
+                eng->objects2d[i].texture = nullptr;
+            }
+        }
+        
+        free(eng->objects2d);
+        eng->objects2d = nullptr;
     }
 
     free(eng);
