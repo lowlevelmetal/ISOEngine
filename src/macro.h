@@ -27,7 +27,7 @@
 #else
 
 #define FATAL(str, ...) {\
-    fprintf(stderr, "[DEBUG] [ISOENGINE] [FATAL @ %s]: " str, "\n", __func__, ##__VA_ARGS__) \
+    fprintf(stderr, "[DEBUG] [ISOENGINE] [FATAL @ %s]: " str "\n", __func__, ##__VA_ARGS__) \
     exit(EXIT_FAILURE); \
 }
 

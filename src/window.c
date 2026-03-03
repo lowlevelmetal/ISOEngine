@@ -12,7 +12,7 @@
 #include <SDL3/SDL_render.h>
 
 bool isoengine_window_create(void *const engine, const char *title, uint16_t width, uint16_t height) {
-    isoengine *eng = (isoengine *)eng;
+    isoengine *eng = (isoengine *)engine;
     
     if(eng == nullptr || title == nullptr) {
         ERROR("Stop sending me nullptrs, thank you");
