@@ -406,7 +406,7 @@ typedef struct isoengine_2dcoords {
  * writing the result back through the endx and endy pointers.
  */
 typedef isoengine_3dcoords (*isoengine_object3d_keypress_callback_func)(const isoengine_3dcoords *const current_coords, const ISO_Scancode keycode);
-typedef isoengine_2dcoords (*isoengine_object2d_keypress_callback_func)(const isoengine_2dcoords *const current_coords, const ISO_Scancode keycode);
+typedef isoengine_2dcoords (*isoengine_object2d_keypress_callback_func)(const isoengine_2dcoords *const current_coords, const bool *const keys);
 
 /**
  * Creates and initializes a new instance of an isometric engine, returning an opaque pointer to the newly created engine object.

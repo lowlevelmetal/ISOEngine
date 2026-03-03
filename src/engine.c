@@ -97,6 +97,7 @@ bool isoengine_destroy(void *engine) {
 }
 
 bool isoengine_handle_events(void *engine) {
+    static uint32_t keycount = 0;
     static bool scancodes[ISO_SCANCODE_COUNT] = {};
     SDL_Event event = {};
     isoengine *eng = (isoengine *)engine;
@@ -112,16 +113,20 @@ bool isoengine_handle_events(void *engine) {
                 return false;
             case SDL_EVENT_KEY_DOWN:
                 scancodes[event.key.scancode] = true;
+                keycount++;
                 break;
             case SDL_EVENT_KEY_UP:
                 scancodes[event.key.scancode] = false;
+                keycount--;
                 break;
         }
     }
 
-    if(!_object_handle_keys(eng, scancodes)) {
-        ERROR("Object handle keys");
-        return false;
+    if(keycount) {
+        if(!_object_handle_keys(eng, scancodes)) {
+            ERROR("Object handle keys");
+            return false;
+        }
     }
 
     return true;

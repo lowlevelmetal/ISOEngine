@@ -33,11 +33,7 @@ bool _object_handle_keys(isoengine *engine, const bool *const scancodes) {
             if(id) {
                 found++;
                 if(callback) {
-                    for(int key = 0; key < ISO_SCANCODE_COUNT; key++) {
-                        if(scancodes[key]) {
-                            object2d->coords = callback(&object2d->coords, key);
-                        }
-                    }
+                    object2d->coords = callback(&object2d->coords, scancodes);
                 }
             }
         }
