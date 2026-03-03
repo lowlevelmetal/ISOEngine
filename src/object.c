@@ -21,17 +21,22 @@ bool _object_handle_keys(isoengine *engine, const bool *const scancodes) {
 
     // Handle 2d objects
     {
+        uint32_t found = 0;
+        uint32_t object2d_count = engine->object2d_count;
         uint32_t object2d_blen = engine->object2d_buffer_len;
         isoengine_object2d *objects2d = engine->objects2d;
 
-        for(uint32_t j = 0; j < object2d_blen; j++) {
+        for(uint32_t j = 0; j < object2d_blen && found < object2d_count; j++) {
             isoengine_object2d *object2d = objects2d + j;
             isoengine_object2d_keypress_callback_func callback = object2d->keypress_callback;
             uint32_t id = object2d->id;
-            if(id && callback) {
-                for(int key = 0; key < ISO_SCANCODE_COUNT; key++) {
-                    if(scancodes[key]) {
-                        object2d->coords = callback(&object2d->coords, key);
+            if(id) {
+                found++;
+                if(callback) {
+                    for(int key = 0; key < ISO_SCANCODE_COUNT; key++) {
+                        if(scancodes[key]) {
+                            object2d->coords = callback(&object2d->coords, key);
+                        }
                     }
                 }
             }
