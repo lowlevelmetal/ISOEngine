@@ -20,11 +20,13 @@ isoengine_2dcoords obj_key_func(const isoengine_2dcoords *const current_coords, 
 
     double vx = 0.0;
     double vy = 0.0;
+    double sprint = 0.0;
 
-    if(keys[ISO_SCANCODE_D]) vx += 200.0;
-    if(keys[ISO_SCANCODE_A]) vx -= 200.0;
-    if(keys[ISO_SCANCODE_W]) vy -= 200.0;
-    if(keys[ISO_SCANCODE_S]) vy += 200.0;
+    if(keys[ISO_SCANCODE_LSHIFT]) sprint = 100.0;
+    if(keys[ISO_SCANCODE_D]) vx += 200.0 + sprint;
+    if(keys[ISO_SCANCODE_A]) vx -= 200.0 + sprint;
+    if(keys[ISO_SCANCODE_W]) vy -= 200.0 + sprint;
+    if(keys[ISO_SCANCODE_S]) vy += 200.0 + sprint;
 
     ret.x = current_coords->x + (vx * dt);
     ret.y = current_coords->y + (vy * dt);
