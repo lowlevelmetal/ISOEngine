@@ -439,10 +439,36 @@ bool isoengine_window_create(void *const engine, const char *title, uint16_t wid
  */
 bool isoengine_render_draw(void *const engine);
 
+/**
+ * @brief Creates a 2D object in the ISO engine.
+ * 
+ * @param engine Pointer to the ISO engine instance.
+ * @param coords Pointer to the 2D coordinates structure for the object placement.
+ * 
+ * @return uint32_t The unique identifier of the created 2D object, or an error code if creation failed.
+ */
 uint32_t isoengine_object2d_create(void *engine, const isoengine_2dcoords *const coords);
 
+/**
+ * Registers a keypress callback function for a 2D object in the ISO engine.
+ *
+ * @param engine Pointer to the ISO engine instance.
+ * @param objectid The unique identifier of the 2D object to attach the callback to.
+ * @param callback The callback function to be invoked when a keypress event occurs for the specified object.
+ *
+ * @return true if the callback was successfully registered, false otherwise.
+ */
 bool isoengine_object2d_keypress_callback(void *engine, uint32_t objectid, isoengine_object2d_keypress_callback_func callback);
 
+/**
+ * @brief Sets a texture for a 2D object in the ISO engine.
+ * 
+ * @param engine Pointer to the ISO engine instance.
+ * @param objectid The unique identifier of the 2D object to apply the texture to.
+ * @param filepng Path to the PNG file to use as the texture.
+ * 
+ * @return true if the texture was successfully applied, false otherwise.
+ */
 bool isoengine_object2d_texture(void *engine, uint32_t objectid, const char *filepng);
 
 #endif

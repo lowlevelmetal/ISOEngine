@@ -53,7 +53,6 @@ static uint32_t _object2d_find_available_id(isoengine *engine) {
 
     for(uint32_t j = 0; j < object_blen; j++) {
         if(!objects[j].id) {
-            objects[j].id = j + 1;
             return j + 1;
         }
     }
@@ -95,6 +94,7 @@ uint32_t isoengine_object2d_create(void *engine, const isoengine_2dcoords * cons
 
     isoengine_object2d *obj = eng->objects2d + (object_id-1);
     obj->coords = *coords;
+    obj->id = object_id;
 
     return object_id;
 }
