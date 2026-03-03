@@ -13,41 +13,22 @@
 
 #include <stdlib.h>
 
-bool _object_handle_keys(isoengine *engine, const bool *const scancodes) {
-    isoengine *eng = (isoengine *)engine;
-    
-    if(!eng) {
+bool _object_handle_keys(isoengine *engine, const bool *const scancodes) {    
+    if(!engine) {
         ERROR("nullptr");
         return false;
-    }
-    
-    // Handle 3d objects
-    {
-        uint32_t object3d_count = eng->object3d_count;
-        isoengine_object3d *objects3d = eng->objects3d;
-
-        for(int i = 0; i < object3d_count; i++) {
-            isoengine_object3d *object3d = objects3d + i;
-            isoengine_object3d_keypress_callback_func callback = object3d->keypress_callback;
-            if(callback) {
-                for(int key = 0; key < ISO_SCANCODE_COUNT; key++) {
-                    if(scancodes[key]) {
-                        object3d->coords = callback(&object3d->coords, key);
-                    }
-                }
-            }
-        }
     }
 
     // Handle 2d objects
     {
-        uint32_t object2d_count = eng->object2d_count;
-        isoengine_object2d *objects2d = eng->objects2d;
+        uint32_t object2d_blen = engine->object2d_buffer_len;
+        isoengine_object2d *objects2d = engine->objects2d;
 
-        for(int i = 0; i < object2d_count; i++) {
-            isoengine_object2d *object2d = objects2d + i;
+        for(uint32_t j = 0; j < object2d_blen; j++) {
+            isoengine_object2d *object2d = objects2d + j;
             isoengine_object2d_keypress_callback_func callback = object2d->keypress_callback;
-            if(callback) {
+            uint32_t id = object2d->id;
+            if(id && callback) {
                 for(int key = 0; key < ISO_SCANCODE_COUNT; key++) {
                     if(scancodes[key]) {
                         object2d->coords = callback(&object2d->coords, key);
@@ -60,43 +41,30 @@ bool _object_handle_keys(isoengine *engine, const bool *const scancodes) {
     return true;
 }
 
-void *isoengine_object3d_create(void *engine, const isoengine_3dcoords * const coords) {
-    isoengine *eng = (isoengine *)engine;
-    if(eng == nullptr) {
-        ERROR("No nullptrs!");
-        return nullptr;
+static uint32_t _object2d_find_available_id(isoengine *engine) {
+    if(!engine) {
+        ERROR("Fuck off nullptr!");
+        return 0;
     }
 
-    // Grow the object buffer in chunks of 1024 if capacity is exceeded.
-    // Uses a temporary pointer so the original buffer is preserved on failure.
-    eng->object3d_count++;
-    if(eng->object3d_count > eng->object3d_buffer_len) {
-        size_t old_nmemb = eng->object3d_buffer_len;
-        eng->object3d_buffer_len += 1024;
-        
-        isoengine_object3d *objects3d = (isoengine_object3d *)recalloc(eng->objects3d, old_nmemb, eng->object3d_buffer_len, sizeof(isoengine_object3d));
-        if(objects3d == nullptr) {
-            ERROR("Out of memory");
-            eng->object3d_buffer_len -= 1024;
-            eng->object3d_count--;
-            return nullptr;
+    isoengine_object2d *objects = engine->objects2d;
+    uint32_t object_blen = engine->object2d_buffer_len;
+
+    for(uint32_t j = 0; j < object_blen; j++) {
+        if(!objects[j].id) {
+            objects[j].id = j + 1;
+            return j + 1;
         }
-
-        eng->objects3d = objects3d;
     }
 
-    isoengine_object3d *obj = eng->objects3d + (eng->object3d_count - 1);
-
-    obj->coords = *coords;
-
-    return obj;
+    return 0;
 }
 
-void *isoengine_object2d_create(void *engine, const isoengine_2dcoords * const coords) {
+uint32_t isoengine_object2d_create(void *engine, const isoengine_2dcoords * const coords) {
     isoengine *eng = (isoengine *)engine;
     if(eng == nullptr) {
         ERROR("No nullptrs!");
-        return nullptr;
+        return 0;
     }
 
     // Grow the object buffer in chunks of 1024 if capacity is exceeded.
@@ -111,26 +79,46 @@ void *isoengine_object2d_create(void *engine, const isoengine_2dcoords * const c
             ERROR("Out of memory");
             eng->object2d_buffer_len -= 1024;
             eng->object2d_count--;
-            return nullptr;
+            return 0;
         }
 
         eng->objects2d = objects2d;
     }
 
-    isoengine_object2d *obj = eng->objects2d + (eng->object2d_count - 1);
+    uint32_t object_id = _object2d_find_available_id(eng);
+    if(!object_id) {
+        ERROR("Failed to find available object id");
+        eng->object2d_count--;
+        return 0;
+    }
 
+    isoengine_object2d *obj = eng->objects2d + (object_id-1);
     obj->coords = *coords;
 
-    return obj;
+    return object_id;
 }
 
-bool isoengine_object2d_texture(void *engine, void *object2d, const char *filepng) {
+bool isoengine_object2d_texture(void *engine, uint32_t objectid, const char *filepng) {
     isoengine *eng = (isoengine *)engine;
-    isoengine_object2d *obj = (isoengine_object2d *)object2d;
     
-    if(obj == nullptr || eng == nullptr || eng->renderer == nullptr) {
+    if(!eng || !eng->objects2d || !eng->renderer) {
         ERROR("Stop with da nullptr yo");
         return false;
+    }
+
+    if(objectid == 0 || objectid > eng->object2d_buffer_len) {
+        ERROR("Object id out of range");
+        return false;
+    }
+
+    isoengine_object2d *obj = eng->objects2d + (objectid-1);
+    if(obj->id != objectid) {
+        ERROR("Object id mismatch");
+        return false;
+    }
+
+    if(obj->texture) {
+        SDL_DestroyTexture(obj->texture);
     }
 
     SDL_Surface *tex_surface = SDL_LoadPNG(filepng);
@@ -151,24 +139,21 @@ bool isoengine_object2d_texture(void *engine, void *object2d, const char *filepn
     return true;
 }
 
-bool isoengine_object3d_keypress_callback(void *object3d, isoengine_object3d_keypress_callback_func callback) {
-    isoengine_object3d *obj = (isoengine_object3d *)object3d;
-    
-    if(obj == nullptr) {
-        ERROR("Object3d cannot be nullptr");
+bool isoengine_object2d_keypress_callback(void *engine, uint32_t objectid, isoengine_object2d_keypress_callback_func callback) {
+    isoengine *eng = (isoengine *)engine;
+    if(!eng) {
+        ERROR("No nullptr :()");
         return false;
     }
 
-    obj->keypress_callback = callback;
+    if(objectid == 0 || objectid > eng->object2d_buffer_len) {
+        ERROR("Object id out of range");
+        return false;
+    }
 
-    return true;
-}
-
-bool isoengine_object2d_keypress_callback(void *object2d, isoengine_object2d_keypress_callback_func callback) {
-    isoengine_object2d *obj = (isoengine_object2d *)object2d;
-    
-    if(obj == nullptr) {
-        ERROR("Object2d cannot be nullptr");
+    isoengine_object2d *obj = eng->objects2d + (objectid-1);
+    if(obj->id != objectid) {
+        ERROR("Object id mismatch");
         return false;
     }
 
