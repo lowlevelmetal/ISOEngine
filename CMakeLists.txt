@@ -15,6 +15,7 @@ add_library(isoengine STATIC
     src/render.c
     src/object.c
     src/memory.c
+    src/clock.c
 )
 
 target_include_directories(isoengine

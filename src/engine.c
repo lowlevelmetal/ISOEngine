@@ -8,43 +8,61 @@
 #include "isoengine/isoengine.h"
 #include "engine.h"
 #include "macro.h"
+#include "clock.h"
 
 #include <SDL3/SDL_events.h>
 #include <SDL3/SDL.h>
 
 void *isoengine_create() {
+    isoengine *eng = nullptr;
     void *engine = calloc(1, sizeof(isoengine));
     if(engine == nullptr) {
         ERROR("Out of Memory");
         return nullptr;
     }
 
-    isoengine *eng = (isoengine *)engine;
+    eng = (isoengine *)engine;
 
     eng->object3d_buffer_len = 1024;
     eng->objects3d = calloc(eng->object3d_buffer_len, sizeof(isoengine_object3d));
     if(eng->objects3d == nullptr) {
         ERROR("Out of memory");
-        free(engine);
-        return nullptr;
+        goto ERROR;
     }
 
     eng->object2d_buffer_len = 1024;
     eng->objects2d = calloc(eng->object2d_buffer_len, sizeof(isoengine_object2d));
     if(eng->objects2d == nullptr) {
         ERROR("Out of memory");
-        free(eng->objects3d);
-        free(eng);
-        return nullptr;
+        goto ERROR;
     }
 
     if(!SDL_Init(SDL_INIT_VIDEO)) {
         ERROR("SDL_Init failed: %s", SDL_GetError());
-        free(engine);
-        return nullptr;
+        goto ERROR;
+    }
+
+    if(!_start_clock(eng)) {
+        ERROR("Failed to start clock");
+        goto ERROR;
     }
 
     return engine;
+
+ERROR:
+    if(eng) {
+        if(eng->objects3d) {
+            free(eng->objects3d);
+        }
+
+        if(eng->objects2d) {
+            free(eng->objects2d);
+        }
+
+        free(eng);
+    }
+
+    return nullptr;
 }
 
 bool isoengine_destroy(void *engine) {
@@ -97,6 +115,7 @@ bool isoengine_destroy(void *engine) {
 }
 
 bool isoengine_handle_events(void *engine) {
+    double dt = 0.0;
     static uint32_t keycount = 0;
     static bool scancodes[ISO_SCANCODE_COUNT] = {};
     SDL_Event event = {};
@@ -104,6 +123,11 @@ bool isoengine_handle_events(void *engine) {
 
     if(eng == nullptr) {
         ERROR("Stop giving me null pointers...");
+        return false;
+    }
+
+    if(!_cycle_clock(eng, &dt)) {
+        ERROR("Failed to cycle clock");
         return false;
     }
 
@@ -123,7 +147,7 @@ bool isoengine_handle_events(void *engine) {
     }
 
     if(keycount) {
-        if(!_object_handle_keys(eng, scancodes)) {
+        if(!_object_handle_keys(eng, scancodes, dt)) {
             ERROR("Object handle keys");
             return false;
         }

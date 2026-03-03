@@ -12,8 +12,10 @@
 
 #include <SDL3/SDL_video.h>
 #include <SDL3/SDL_render.h>
+#include <time.h>
 
 typedef struct isoengine {
+    struct timespec prev;
     SDL_Window *window;
     SDL_Renderer *renderer;
     isoengine_object3d *objects3d;

@@ -27,6 +27,6 @@ typedef struct isoengine_object2d {
 } isoengine_object2d;
 
 struct isoengine;
-bool _object_handle_keys(struct isoengine *engine, const bool *const scancodes);
+bool _object_handle_keys(struct isoengine *engine, const bool *const scancodes, double dt);
 
 #endif

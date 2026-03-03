@@ -13,7 +13,7 @@
 
 #include <stdlib.h>
 
-bool _object_handle_keys(isoengine *engine, const bool *const scancodes) {    
+bool _object_handle_keys(isoengine *engine, const bool *const scancodes, double dt) {    
     if(!engine) {
         ERROR("nullptr");
         return false;
@@ -33,7 +33,7 @@ bool _object_handle_keys(isoengine *engine, const bool *const scancodes) {
             if(id) {
                 found++;
                 if(callback) {
-                    object2d->coords = callback(&object2d->coords, scancodes);
+                    object2d->coords = callback(&object2d->coords, scancodes, dt);
                 }
             }
         }
