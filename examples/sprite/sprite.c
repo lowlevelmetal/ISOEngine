@@ -48,7 +48,7 @@ int main() {
     }
 
     isoengine_2dcoords coords = {256.0, 256.0};
-    uint32_t obj = isoengine_object2d_create(engine, &coords);
+    uint64_t obj = isoengine_object2d_create(engine, &coords);
     if(!obj) {
         fprintf(stderr, "Failed to create 2d object\n");
         return EXIT_FAILURE;

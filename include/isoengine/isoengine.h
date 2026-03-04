@@ -388,24 +388,16 @@ typedef enum isoengine_scancode
 
 } ISO_Scancode;
 
-typedef struct isoengine_3dcoords {
-    double x;
-    double y;
-    double z;
-} isoengine_3dcoords;
-
 typedef struct isoengine_2dcoords {
     double x;
     double y;
 } isoengine_2dcoords;
 
 /**
- * A function pointer type for a callback that handles key press events in an isometric engine, taking a starting position (startx, starty),
- * output pointers for the resulting end position (endx, endy), and an isoengine_keycode indicating which key was pressed.
- * This callback pattern allows the engine to compute a new position based on the original coordinates and the specific key input,
- * writing the result back through the endx and endy pointers.
+ * A function pointer type for a callback that handles key press events for a 2D object.
+ * Given the object's current coordinates, the full scancode state array, and the delta time,
+ * the callback returns the updated coordinates.
  */
-typedef isoengine_3dcoords (*isoengine_object3d_keypress_callback_func)(const isoengine_3dcoords *const current_coords, const ISO_Scancode keycode);
 typedef isoengine_2dcoords (*isoengine_object2d_keypress_callback_func)(const isoengine_2dcoords *const current_coords, const bool *const keys, double dt);
 
 /**
@@ -445,20 +437,20 @@ bool isoengine_render_draw(void *const engine);
  * @param engine Pointer to the ISO engine instance.
  * @param coords Pointer to the 2D coordinates structure for the object placement.
  * 
- * @return uint32_t The unique identifier of the created 2D object, or an error code if creation failed.
+ * @return uint64_t The unique identifier of the created 2D object, or 0 if creation failed.
  */
-uint32_t isoengine_object2d_create(void *engine, const isoengine_2dcoords *const coords);
+uint64_t isoengine_object2d_create(void *engine, const isoengine_2dcoords *const coords);
 
 /**
  * Registers a keypress callback function for a 2D object in the ISO engine.
  *
  * @param engine Pointer to the ISO engine instance.
  * @param objectid The unique identifier of the 2D object to attach the callback to.
- * @param callback The callback function to be invoked when a keypress event occurs for the specified object.
+ * @param callback The callback function to be invoked when a keypress event occurs for the specified object (nullptr to remove callback).
  *
  * @return true if the callback was successfully registered, false otherwise.
  */
-bool isoengine_object2d_keypress_callback(void *engine, uint32_t objectid, isoengine_object2d_keypress_callback_func callback);
+bool isoengine_object2d_keypress_callback(void *engine, uint64_t objectid, isoengine_object2d_keypress_callback_func callback);
 
 /**
  * @brief Sets a texture for a 2D object in the ISO engine.
@@ -469,6 +461,8 @@ bool isoengine_object2d_keypress_callback(void *engine, uint32_t objectid, isoen
  * 
  * @return true if the texture was successfully applied, false otherwise.
  */
-bool isoengine_object2d_texture(void *engine, uint32_t objectid, const char *filepng);
+bool isoengine_object2d_texture(void *engine, uint64_t objectid, const char *filepng);
+
+bool isoengine_object2d_delete(void *engine, uint64_t objectid);
 
 #endif

@@ -26,6 +26,11 @@
 
 #else
 
+#define DEBUG(str, ...) {\
+    printf("[DEBUG] [ISOENGINE] [%s]: " str "\n", __func__, ##__VA_ARGS__); \
+    fflush(stdout); \
+}
+
 #define FATAL(str, ...) {\
     fprintf(stderr, "[DEBUG] [ISOENGINE] [FATAL @ %s]: " str "\n", __func__, ##__VA_ARGS__) \
     exit(EXIT_FAILURE); \

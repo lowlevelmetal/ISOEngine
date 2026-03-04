@@ -12,6 +12,7 @@
 #include "memory.h"
 
 #include <stdlib.h>
+#include <stdckdint.h>
 
 bool _object_handle_keys(isoengine *engine, const bool *const scancodes, double dt) {    
     if(!engine) {
@@ -48,19 +49,127 @@ static uint32_t _object2d_find_available_id(isoengine *engine) {
         return 0;
     }
 
+    engine->next_object2d_id++;
+    if(engine->next_object2d_id == 0) {
+        ERROR("Object ID counter overflow");
+        return 0;
+    }
+
+    return engine->next_object2d_id;
+}
+
+static isoengine_object2d *_object2d_find_by_id(isoengine *engine, uint64_t objectid) {
+    if(!engine || !engine->objects2d) {
+        ERROR("nullptr");
+        return nullptr;
+    }
+
     isoengine_object2d *objects = engine->objects2d;
     uint32_t object_blen = engine->object2d_buffer_len;
 
     for(uint32_t j = 0; j < object_blen; j++) {
-        if(!objects[j].id) {
-            return j + 1;
+        if(objects[j].id == objectid) {
+            return &objects[j];
         }
     }
 
-    return 0;
+    return nullptr;
 }
 
-uint32_t isoengine_object2d_create(void *engine, const isoengine_2dcoords * const coords) {
+static isoengine_object2d *_shrink_defrag_objects2d(isoengine_object2d *objects, size_t curlen, size_t newlen, uint32_t object_count) {
+    DEBUG("Shrinking and Defragging 2d objects");
+    
+    if(!objects) {
+        ERROR("nullptr");
+        return nullptr;
+    }
+    
+    if(newlen < OBJECT_BUFFER_SIZE) {
+        ERROR("New length cannot be less than minimum size");
+        return nullptr;
+    }
+
+    if(newlen > curlen) {
+        ERROR("New length cannot be greater than current length");
+        return nullptr;
+    }
+
+    if(newlen % OBJECT_BUFFER_SIZE) {
+        ERROR("New length must be divisible by global buffer size");
+        return nullptr;
+    }
+
+    if(object_count > newlen) {
+        ERROR("Object count must be less than or equal to the new length");
+        return nullptr;
+    }
+
+    isoengine_object2d *newobjects = (isoengine_object2d *)malloc(sizeof(isoengine_object2d) * newlen);
+    if(!newobjects) {
+        ERROR("out of memory");
+        return nullptr;
+    }
+
+    {
+        size_t newindex = 0;
+        for(size_t i = 0; i < curlen && newindex < object_count; i++) {
+            if(objects[i].id) {
+                newobjects[newindex] = objects[i];
+                newindex++;
+            }
+        }
+
+    }
+    
+    return newobjects;
+}
+
+bool isoengine_object2d_delete(void *engine, uint64_t objectid) {
+    isoengine *eng = (isoengine *)engine;
+    
+    if(!eng || !eng->objects2d) {
+        ERROR("nullptr");
+        return false;
+    }
+
+    if(objectid == 0) {
+        ERROR("Object id cannot be zero");
+        return false;
+    }
+
+    isoengine_object2d *obj = _object2d_find_by_id(eng, objectid);
+    if(!obj) {
+        ERROR("Object not found");
+        return false;
+    }
+
+    if(obj->texture) {
+        SDL_DestroyTexture(obj->texture);
+    }
+
+    memset(obj, 0, sizeof(isoengine_object2d));
+
+    {
+        eng->object2d_count--;
+        size_t newbufsize = eng->object2d_buffer_len - OBJECT_BUFFER_SIZE;
+        if(eng->object2d_count < newbufsize) {
+            isoengine_object2d *oldobjects = eng->objects2d;
+            isoengine_object2d *newobjects = _shrink_defrag_objects2d(oldobjects, eng->object2d_buffer_len, newbufsize, eng->object2d_count);
+            if(!newobjects) {
+                ERROR("Failed to defrag object buffer");
+                return false;
+            }
+
+            free(oldobjects);
+            eng->object2d_buffer_len = newbufsize;
+            eng->objects2d = newobjects;
+        }
+    }
+
+    return true;
+}
+
+uint64_t isoengine_object2d_create(void *engine, const isoengine_2dcoords * const coords) {
     isoengine *eng = (isoengine *)engine;
     if(eng == nullptr) {
         ERROR("No nullptrs!");
@@ -85,21 +194,34 @@ uint32_t isoengine_object2d_create(void *engine, const isoengine_2dcoords * cons
         eng->objects2d = objects2d;
     }
 
-    uint32_t object_id = _object2d_find_available_id(eng);
+    uint64_t object_id = _object2d_find_available_id(eng);
     if(!object_id) {
         ERROR("Failed to find available object id");
         eng->object2d_count--;
         return 0;
     }
 
-    isoengine_object2d *obj = eng->objects2d + (object_id-1);
+    // Find the first empty slot in the buffer
+    isoengine_object2d *obj = nullptr;
+    for(uint32_t j = 0; j < eng->object2d_buffer_len; j++) {
+        if(!eng->objects2d[j].id) {
+            obj = eng->objects2d + j;
+            break;
+        }
+    }
+    if(!obj) {
+        ERROR("Failed to find empty slot");
+        eng->object2d_count--;
+        return 0;
+    }
+
     obj->coords = *coords;
     obj->id = object_id;
 
     return object_id;
 }
 
-bool isoengine_object2d_texture(void *engine, uint32_t objectid, const char *filepng) {
+bool isoengine_object2d_texture(void *engine, uint64_t objectid, const char *filepng) {
     isoengine *eng = (isoengine *)engine;
     
     if(!eng || !eng->objects2d || !eng->renderer) {
@@ -107,19 +229,21 @@ bool isoengine_object2d_texture(void *engine, uint32_t objectid, const char *fil
         return false;
     }
 
-    if(objectid == 0 || objectid > eng->object2d_buffer_len) {
-        ERROR("Object id out of range");
+    if(objectid == 0) {
+        ERROR("Object id cannot be zero");
         return false;
     }
 
-    isoengine_object2d *obj = eng->objects2d + (objectid-1);
-    if(obj->id != objectid) {
-        ERROR("Object id mismatch");
+    isoengine_object2d *obj = _object2d_find_by_id(eng, objectid);
+    if(!obj) {
+        ERROR("Object not found");
         return false;
     }
 
+    // If we are changing the texture, lets first delete the existing one.
     if(obj->texture) {
         SDL_DestroyTexture(obj->texture);
+        obj->texture = nullptr;
     }
 
     SDL_Surface *tex_surface = SDL_LoadPNG(filepng);
@@ -140,21 +264,21 @@ bool isoengine_object2d_texture(void *engine, uint32_t objectid, const char *fil
     return true;
 }
 
-bool isoengine_object2d_keypress_callback(void *engine, uint32_t objectid, isoengine_object2d_keypress_callback_func callback) {
+bool isoengine_object2d_keypress_callback(void *engine, uint64_t objectid, isoengine_object2d_keypress_callback_func callback) {
     isoengine *eng = (isoengine *)engine;
     if(!eng) {
         ERROR("No nullptr :()");
         return false;
     }
 
-    if(objectid == 0 || objectid > eng->object2d_buffer_len) {
-        ERROR("Object id out of range");
+    if(objectid == 0) {
+        ERROR("Object id cannot be zero");
         return false;
     }
 
-    isoengine_object2d *obj = eng->objects2d + (objectid-1);
-    if(obj->id != objectid) {
-        ERROR("Object id mismatch");
+    isoengine_object2d *obj = _object2d_find_by_id(eng, objectid);
+    if(!obj) {
+        ERROR("Object not found");
         return false;
     }
 
