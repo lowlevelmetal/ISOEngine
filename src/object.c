@@ -22,17 +22,13 @@ bool _object_handle_keys(isoengine *engine, const bool *const scancodes, double 
 
     // Handle 2d objects
     {
-        uint32_t found = 0;
-        uint32_t object2d_count = engine->object2d_count;
         uint32_t object2d_blen = engine->object2d_buffer_len;
         isoengine_object2d *objects2d = engine->objects2d;
 
-        for(uint32_t j = 0; j < object2d_blen && found < object2d_count; j++) {
+        for(uint32_t j = 0; j < object2d_blen; j++) {
             isoengine_object2d *object2d = objects2d + j;
-            isoengine_object2d_keypress_callback_func callback = object2d->keypress_callback;
-            uint32_t id = object2d->id;
-            if(id) {
-                found++;
+            if(object2d->id) {
+                isoengine_object2d_keypress_callback_func callback = object2d->keypress_callback;
                 if(callback) {
                     object2d->coords = callback(&object2d->coords, scancodes, dt);
                 }
@@ -43,88 +39,46 @@ bool _object_handle_keys(isoengine *engine, const bool *const scancodes, double 
     return true;
 }
 
-static uint32_t _object2d_find_available_id(isoengine *engine) {
-    if(!engine) {
-        ERROR("Fuck off nullptr!");
-        return 0;
+/**
+ * Pop a free slot index from the free stack.
+ * Returns the slot index, or UINT32_MAX if no free slots.
+ */
+static uint32_t _object2d_alloc_slot(isoengine *engine) {
+    if(!engine || !engine->free_stack) {
+        return UINT32_MAX;
     }
-
-    engine->next_object2d_id++;
-    if(engine->next_object2d_id == 0) {
-        ERROR("Object ID counter overflow");
-        return 0;
+    if(engine->free_stack_top == 0) {
+        return UINT32_MAX;
     }
-
-    return engine->next_object2d_id;
+    engine->free_stack_top--;
+    return engine->free_stack[engine->free_stack_top];
 }
 
-static isoengine_object2d *_object2d_find_by_id(isoengine *engine, uint64_t objectid) {
-    if(!engine || !engine->objects2d) {
-        ERROR("nullptr");
+/**
+ * Push a slot index back onto the free stack.
+ */
+static void _object2d_free_slot(isoengine *engine, uint32_t index) {
+    if(!engine || !engine->free_stack) {
+        return;
+    }
+    engine->free_stack[engine->free_stack_top] = index;
+    engine->free_stack_top++;
+}
+
+static inline isoengine_object2d *_object2d_find_by_id(isoengine *engine, uint32_t objectid) {
+    if(!engine || !engine->objects2d || objectid == 0 || objectid > engine->object2d_buffer_len) {
         return nullptr;
     }
 
-    isoengine_object2d *objects = engine->objects2d;
-    uint32_t object_blen = engine->object2d_buffer_len;
-
-    for(uint32_t j = 0; j < object_blen; j++) {
-        if(objects[j].id == objectid) {
-            return &objects[j];
-        }
-    }
-
-    return nullptr;
-}
-
-static isoengine_object2d *_shrink_defrag_objects2d(isoengine_object2d *objects, size_t curlen, size_t newlen, uint32_t object_count) {
-    DEBUG("Shrinking and Defragging 2d objects");
-    
-    if(!objects) {
-        ERROR("nullptr");
+    isoengine_object2d *obj = &engine->objects2d[objectid - 1];
+    if(obj->id != objectid) {
         return nullptr;
     }
     
-    if(newlen < OBJECT_BUFFER_SIZE) {
-        ERROR("New length cannot be less than minimum size");
-        return nullptr;
-    }
-
-    if(newlen > curlen) {
-        ERROR("New length cannot be greater than current length");
-        return nullptr;
-    }
-
-    if(newlen % OBJECT_BUFFER_SIZE) {
-        ERROR("New length must be divisible by global buffer size");
-        return nullptr;
-    }
-
-    if(object_count > newlen) {
-        ERROR("Object count must be less than or equal to the new length");
-        return nullptr;
-    }
-
-    isoengine_object2d *newobjects = (isoengine_object2d *)malloc(sizeof(isoengine_object2d) * newlen);
-    if(!newobjects) {
-        ERROR("out of memory");
-        return nullptr;
-    }
-
-    {
-        size_t newindex = 0;
-        for(size_t i = 0; i < curlen && newindex < object_count; i++) {
-            if(objects[i].id) {
-                newobjects[newindex] = objects[i];
-                newindex++;
-            }
-        }
-
-    }
-    
-    return newobjects;
+    return obj;
 }
 
-bool isoengine_object2d_delete(void *engine, uint64_t objectid) {
+bool isoengine_object2d_delete(void *engine, uint32_t objectid) {
     isoengine *eng = (isoengine *)engine;
     
     if(!eng || !eng->objects2d) {
@@ -147,81 +101,68 @@ bool isoengine_object2d_delete(void *engine, uint64_t objectid) {
         SDL_DestroyTexture(obj->texture);
     }
 
+    uint32_t index = objectid - 1;
     memset(obj, 0, sizeof(isoengine_object2d));
-
-    {
-        eng->object2d_count--;
-        size_t newbufsize = eng->object2d_buffer_len - OBJECT_BUFFER_SIZE;
-        if(eng->object2d_count < newbufsize) {
-            isoengine_object2d *oldobjects = eng->objects2d;
-            isoengine_object2d *newobjects = _shrink_defrag_objects2d(oldobjects, eng->object2d_buffer_len, newbufsize, eng->object2d_count);
-            if(!newobjects) {
-                ERROR("Failed to defrag object buffer");
-                return false;
-            }
-
-            free(oldobjects);
-            eng->object2d_buffer_len = newbufsize;
-            eng->objects2d = newobjects;
-        }
-    }
+    eng->object2d_count--;
+    _object2d_free_slot(eng, index);
 
     return true;
 }
 
-uint64_t isoengine_object2d_create(void *engine, const isoengine_2dcoords * const coords) {
+uint32_t isoengine_object2d_create(void *engine, const isoengine_2dcoords * const coords) {
     isoengine *eng = (isoengine *)engine;
     if(eng == nullptr) {
         ERROR("No nullptrs!");
         return 0;
     }
 
-    // Grow the object buffer in chunks of 1024 if capacity is exceeded.
-    // Uses a temporary pointer so the original buffer is preserved on failure.
-    eng->object2d_count++;
-    if(eng->object2d_count > eng->object2d_buffer_len) {
-        size_t old_nmemb = eng->object2d_buffer_len;
-        eng->object2d_buffer_len += 1024;
-        
-        isoengine_object2d *objects2d = (isoengine_object2d *)recalloc(eng->objects2d, old_nmemb, eng->object2d_buffer_len, sizeof(isoengine_object2d));
+    // Try to get a free slot from the stack
+    uint32_t index = _object2d_alloc_slot(eng);
+
+    // If no free slots, grow the buffer
+    if(index == UINT32_MAX) {
+        size_t old_len = eng->object2d_buffer_len;
+        size_t new_len = old_len + OBJECT_BUFFER_SIZE;
+
+        DEBUG("Growing 2d object buffer %ld --> %ld", old_len * sizeof(isoengine_object2d), new_len * sizeof(isoengine_object2d));
+
+        isoengine_object2d *objects2d = (isoengine_object2d *)recalloc(eng->objects2d, old_len, new_len, sizeof(isoengine_object2d));
         if(objects2d == nullptr) {
             ERROR("Out of memory");
-            eng->object2d_buffer_len -= 1024;
-            eng->object2d_count--;
             return 0;
         }
-
         eng->objects2d = objects2d;
-    }
 
-    uint64_t object_id = _object2d_find_available_id(eng);
-    if(!object_id) {
-        ERROR("Failed to find available object id");
-        eng->object2d_count--;
-        return 0;
-    }
-
-    // Find the first empty slot in the buffer
-    isoengine_object2d *obj = nullptr;
-    for(uint32_t j = 0; j < eng->object2d_buffer_len; j++) {
-        if(!eng->objects2d[j].id) {
-            obj = eng->objects2d + j;
-            break;
+        // Grow the free stack
+        uint32_t *new_stack = (uint32_t *)realloc(eng->free_stack, new_len * sizeof(uint32_t));
+        if(new_stack == nullptr) {
+            ERROR("Out of memory");
+            return 0;
         }
-    }
-    if(!obj) {
-        ERROR("Failed to find empty slot");
-        eng->object2d_count--;
-        return 0;
+        eng->free_stack = new_stack;
+
+        // Push new slots onto the free stack (in reverse so lowest indices are popped first)
+        for(size_t i = new_len - 1; i >= old_len + 1; i--) {
+            eng->free_stack[eng->free_stack_top] = (uint32_t)i;
+            eng->free_stack_top++;
+        }
+
+        eng->object2d_buffer_len = (uint32_t)new_len;
+
+        // Use old_len as the slot for this object (lowest new index)
+        index = (uint32_t)old_len;
     }
 
+    uint32_t id = index + 1;
+    isoengine_object2d *obj = &eng->objects2d[index];
     obj->coords = *coords;
-    obj->id = object_id;
+    obj->id = id;
+    eng->object2d_count++;
 
-    return object_id;
+    return id;
 }
 
-bool isoengine_object2d_texture(void *engine, uint64_t objectid, const char *filepng) {
+bool isoengine_object2d_texture(void *engine, uint32_t objectid, const char *filepng) {
     isoengine *eng = (isoengine *)engine;
     
     if(!eng || !eng->objects2d || !eng->renderer) {
@@ -264,7 +205,7 @@ bool isoengine_object2d_texture(void *engine, uint64_t objectid, const char *fil
     return true;
 }
 
-bool isoengine_object2d_keypress_callback(void *engine, uint64_t objectid, isoengine_object2d_keypress_callback_func callback) {
+bool isoengine_object2d_keypress_callback(void *engine, uint32_t objectid, isoengine_object2d_keypress_callback_func callback) {
     isoengine *eng = (isoengine *)engine;
     if(!eng) {
         ERROR("No nullptr :()");

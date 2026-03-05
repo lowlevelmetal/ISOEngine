@@ -28,12 +28,10 @@ bool isoengine_render_draw(void *const engine) {
     }
 
     if(eng->objects2d) {
-        uint32_t found = 0;
-        for(size_t i = 0; i < eng->object2d_buffer_len && found < eng->object2d_count; i++) {
+        for(size_t i = 0; i < eng->object2d_buffer_len; i++) {
             if(!eng->objects2d[i].id) {
                 continue;
             }
-            found++;
             if(eng->objects2d[i].texture) {
                 SDL_FRect rect = {};
                 rect.x = eng->objects2d[i].coords.x;

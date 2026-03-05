@@ -19,9 +19,10 @@ typedef struct isoengine {
     SDL_Window *window;
     SDL_Renderer *renderer;
     isoengine_object2d *objects2d;
+    uint32_t *free_stack;         // Stack of free slot indices
+    uint32_t free_stack_top;      // Index of top of free stack (0 = empty)
     uint32_t object2d_count;
-    uint32_t object2d_buffer_len; // Engine will prealloc space for objects for performance, so the object count will differ from the actual buffer size
-    uint64_t next_object2d_id;    // Monotonically increasing counter for unique object IDs
+    uint32_t object2d_buffer_len;
     uint16_t width;
     uint16_t height;
 } isoengine;

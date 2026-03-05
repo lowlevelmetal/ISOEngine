@@ -19,7 +19,7 @@ int main() {
     assert(engine != nullptr);
 
     {
-        uint64_t objects2d[ITER];
+        uint32_t objects2d[ITER];
         for(int i = 0; i < ITER; i++) {
             assert((objects2d[i] = isoengine_object2d_create(engine, &coords2d)) != 0);
         }
@@ -30,7 +30,7 @@ int main() {
     }
 
     {
-        uint64_t objects2d[ITER*2];
+        uint32_t objects2d[ITER*2];
         for(int i = 0; i < ITER*2; i++) {
             assert((objects2d[i] = isoengine_object2d_create(engine, &coords2d)) != 0);
         }
@@ -41,7 +41,7 @@ int main() {
     }
 
     {
-        uint64_t objects2d[ITER*3];
+        uint32_t objects2d[ITER*3];
         for(int i = 0; i < ITER*3; i++) {
             assert((objects2d[i] = isoengine_object2d_create(engine, &coords2d)) != 0);
         }
@@ -52,12 +52,23 @@ int main() {
     }
 
     {
-        uint64_t objects2d[ITER*20];
+        uint32_t objects2d[ITER*20];
         for(int i = 0; i < ITER*20; i++) {
             assert((objects2d[i] = isoengine_object2d_create(engine, &coords2d)) != 0);
         }
 
         for(int i = 0; i < (ITER*20)/2; i++) {
+            assert(isoengine_object2d_delete(engine, objects2d[i*2]));
+        }
+    }
+
+    {
+        uint32_t objects2d[ITER*100];
+        for(int i = 0; i < ITER*100; i++) {
+            assert((objects2d[i] = isoengine_object2d_create(engine, &coords2d)) != 0);
+        }
+
+        for(int i = 0; i < (ITER*100)/2; i++) {
             assert(isoengine_object2d_delete(engine, objects2d[i*2]));
         }
     }

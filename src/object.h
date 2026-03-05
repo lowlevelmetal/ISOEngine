@@ -17,7 +17,7 @@
 #endif
 
 typedef struct isoengine_object2d {
-    uint64_t id;
+    uint32_t id;
     isoengine_object2d_keypress_callback_func keypress_callback;
     isoengine_2dcoords coords;
     SDL_Texture *texture;

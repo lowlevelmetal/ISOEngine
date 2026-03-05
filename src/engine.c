@@ -23,11 +23,23 @@ void *isoengine_create() {
 
     eng = (isoengine *)engine;
 
-    eng->object2d_buffer_len = 1024;
+    eng->object2d_buffer_len = OBJECT_BUFFER_SIZE;
     eng->objects2d = calloc(eng->object2d_buffer_len, sizeof(isoengine_object2d));
     if(eng->objects2d == nullptr) {
         ERROR("Out of memory");
         goto ERROR;
+    }
+
+    // Initialize the free stack with all slot indices (push in reverse so lowest pops first)
+    eng->free_stack = (uint32_t *)malloc(eng->object2d_buffer_len * sizeof(uint32_t));
+    if(eng->free_stack == nullptr) {
+        ERROR("Out of memory");
+        goto ERROR;
+    }
+    eng->free_stack_top = 0;
+    for(int i = (int)eng->object2d_buffer_len - 1; i >= 0; i--) {
+        eng->free_stack[eng->free_stack_top] = (uint32_t)i;
+        eng->free_stack_top++;
     }
 
     if(!SDL_Init(SDL_INIT_VIDEO)) {
@@ -46,6 +58,9 @@ ERROR:
     if(eng) {
         if(eng->objects2d) {
             free(eng->objects2d);
+        }
+        if(eng->free_stack) {
+            free(eng->free_stack);
         }
 
         free(eng);
@@ -73,13 +88,8 @@ bool isoengine_destroy(void *engine) {
     }
 
     if(eng->objects2d) {
-        uint32_t found = 0;
-        for(size_t i = 0; i < eng->object2d_buffer_len && found < eng->object2d_count; i++) {
-            if(!eng->objects2d[i].id) {
-                continue;
-            }
-            found++;
-            if(eng->objects2d[i].texture) {
+        for(size_t i = 0; i < eng->object2d_buffer_len; i++) {
+            if(eng->objects2d[i].id && eng->objects2d[i].texture) {
                 SDL_DestroyTexture(eng->objects2d[i].texture);
                 eng->objects2d[i].texture = nullptr;
             }
@@ -87,6 +97,11 @@ bool isoengine_destroy(void *engine) {
         
         free(eng->objects2d);
         eng->objects2d = nullptr;
+    }
+
+    if(eng->free_stack) {
+        free(eng->free_stack);
+        eng->free_stack = nullptr;
     }
 
     free(eng);
